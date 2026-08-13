@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          # The workspace root uses the `code/*` glob, which needs 3.11+.
+          sdk: stable
+
+      # Resolves every workspace member at once, from the repository root.
+      - name: Install dependencies
+        run: dart pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: dart analyze --fatal-infos
+
+      - name: Test
+        run: dart test
+        working-directory: code/remind_core
+
+      - name: Run the example
+        run: dart run example/remind_core_example.dart
+        working-directory: code/remind_core
+
+  publish-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - name: Check remind_core is publishable
+        run: dart pub publish --dry-run
+        working-directory: code/remind_core

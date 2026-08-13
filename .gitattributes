@@ -1,0 +1,4 @@
+# Normalise line endings in the repository to LF regardless of the host, so
+# that `dart format --set-exit-if-changed` behaves the same on Windows and on
+# Linux CI.
+* text=auto eol=lf

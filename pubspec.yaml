@@ -1,0 +1,18 @@
+# Raíz del monorepo `remind`.
+#
+# No es un paquete publicable: existe solo para declarar el pub workspace,
+# de modo que `dart pub get` en la raíz resuelva las dependencias de todos
+# los paquetes a la vez, con un único pubspec.lock compartido.
+#
+# El glob `code/*` requiere Dart 3.11+. Cada carpeta bajo `code/` debe ser
+# un paquete válido con `resolution: workspace` en su pubspec.
+# The Dart docs use `_` here, but that trips the `package_names` lint, so the
+# root carries a real identifier. It is never published.
+name: remind_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+workspace:
+  - code/remind_core
