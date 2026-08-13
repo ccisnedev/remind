@@ -10,8 +10,6 @@ issue_tracker: https://github.com/ccisnedev/remind/issues
 environment:
   sdk: ^3.6.0
 
-resolution: workspace
-
 dependencies:
   collection: ^1.19.0
   meta: ^1.16.0

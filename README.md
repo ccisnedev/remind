@@ -81,24 +81,33 @@ moment, so the engine resolves it while enumerating and drops the occurrences
 that fail. An ambient condition needs device state that does not exist yet, so
 it travels with the occurrence and is evaluated when it fires.
 
-See [`doc/architecture.md`](doc/architecture.md) for the reasoning in full
-(Spanish).
+See [`docs/architecture.md`](docs/architecture.md) for the reasoning in full.
 
 ## Repository layout
 
+The root stays clean; everything buildable lives under `code/`, and each
+directory there is **self-contained** — its own manifest, lints, licence and
+tests, movable into a repository of its own without editing a line. There is no
+pub workspace and no shared configuration to inherit, which also means `code/`
+is free to hold things that are not Dart packages.
+
 ```
 remind/
-├── pubspec.yaml          pub workspace root
 ├── code/
-│   └── remind_core/      the engine
-└── doc/architecture.md
+│   ├── remind_core/      the engine
+│   └── app/              demo surface
+└── docs/
+    ├── architecture.md   decision record
+    ├── roadmap.md
+    └── adr/
 ```
 
-Dart 3.11+ resolves the whole workspace at once:
+Work on a package from inside it:
 
 ```sh
+cd code/remind_core
 dart pub get
-cd code/remind_core && dart test
+dart test
 ```
 
 ## Status

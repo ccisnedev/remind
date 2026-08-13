@@ -1,5 +1,9 @@
 name: CI
 
+# Each package under `code/` is self-contained, so every job scopes itself to
+# one package directory. Adding a package means adding it to the matrix — there
+# is no workspace root resolving them together.
+
 on:
   push:
     branches: [main]
@@ -7,17 +11,24 @@ on:
     branches: [main]
 
 jobs:
-  analyze-and-test:
+  dart-package:
+    name: ${{ matrix.package }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - remind_core
+    defaults:
+      run:
+        working-directory: code/${{ matrix.package }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: dart-lang/setup-dart@v1
         with:
-          # The workspace root uses the `code/*` glob, which needs 3.11+.
           sdk: stable
 
-      # Resolves every workspace member at once, from the repository root.
       - name: Install dependencies
         run: dart pub get
 
@@ -29,20 +40,20 @@ jobs:
 
       - name: Test
         run: dart test
-        working-directory: code/remind_core
 
-      - name: Run the example
-        run: dart run example/remind_core_example.dart
-        working-directory: code/remind_core
+      - name: Check the package is publishable
+        run: dart pub publish --dry-run
 
-  publish-dry-run:
+  example:
+    name: remind_core example
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: code/remind_core
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: stable
       - run: dart pub get
-      - name: Check remind_core is publishable
-        run: dart pub publish --dry-run
-        working-directory: code/remind_core
+      - run: dart run example/remind_core_example.dart
