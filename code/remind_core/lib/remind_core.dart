@@ -85,3 +85,5 @@ export 'src/scheduling/reconciler.dart' show ReconciliationPlan, Reconciler;
 export 'src/scheduling/registration.dart'
     show RegionRegistration, Registration, RegistrationKey, TimedRegistration;
 export 'src/scheduling/scheduling_budget.dart' show SchedulingBudget;
+export 'src/serialization/reminder_codec.dart'
+    show ReminderCodec, ReminderCodecException, ReminderJson;

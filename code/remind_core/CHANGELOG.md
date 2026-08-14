@@ -51,6 +51,16 @@ delivered to a device yet, because no backend implements the ports.
   in `ReconciliationPlan.droppedRegions` rather than vanishing.
 - **Ports** — `ReminderStore` (with an `InMemoryReminderStore` implementation)
   and `ReminderBackend`.
+- **`ReminderCodec`** — JSON encoding for the whole model, including the sealed
+  trigger and condition hierarchies. Defined in one place rather than as
+  `toJson` methods across the model, because every store, export file and future
+  sync has to agree on the format. The shape is deliberately readable
+  (`"2026-03-08"`, `[1, 3, 5]`) since it ends up in databases people read by
+  hand. Stamped with a version, and decoding refuses anything newer than it
+  understands rather than misreading it. Malformed input throws
+  `ReminderCodecException` naming the offending field — a reminder that decoded
+  *almost* correctly would fire at the wrong time, which is worse than one that
+  visibly failed to load.
 
 ### Known limitations
 
