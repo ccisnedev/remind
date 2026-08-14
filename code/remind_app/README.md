@@ -1,0 +1,70 @@
+# remind_app
+
+Demonstration app for the `remind` ecosystem. Android only — adding iOS would
+need a Mac to build on, so it stays out until there is one.
+
+Its purpose is not to be a product. It is the pressure test: unit tests prove
+the packages are *correct*, and only building something real proves they are
+*usable*.
+
+## What it proves
+
+**The no-location configuration works end to end.** This app depends on
+`remind_core` and `remind_notifications` and nothing else. Its manifest declares
+`POST_NOTIFICATIONS` and no location permission whatsoever — the configuration
+most applications embedding reminders actually want, and the one that has to
+work without the rest of the ecosystem installed.
+
+**The reconciler is visible.** The plan screen shows what *would* be registered,
+cancelled, retained, or dropped, without applying any of it. When a reminder
+does not arrive, that screen answers whether it was ever scheduled, whether it
+fell past the budget, or whether nothing installed could deliver it. Being able
+to look before acting is most of the reason `Reconciler.plan` returns data
+instead of just doing the work.
+
+**Daylight saving is legible.** Each reminder lists its next occurrences with
+the UTC offset shown, so a transition is visible as the offset moving while the
+wall clock stays put. Occurrences that a transition erased or duplicated are
+flagged.
+
+## Running it
+
+```sh
+cd code/remind_app
+flutter pub get
+flutter run
+```
+
+The timer button on the main screen schedules a one-shot reminder two minutes
+out, so delivery can be checked on a real device without waiting until morning.
+
+## The orchestration layer
+
+`RemindRuntime` ties store, reconciler and backends together and re-runs on
+launch and on resume. It lives here rather than in `remind_core` on purpose:
+designing an orchestrator before a real backend existed would have been
+guesswork. It is a candidate for promotion into the core once its shape has been
+proven against enough backends to be sure of it.
+
+What it does that the core cannot:
+
+- **Routes registrations** to whichever backend declares it `canHandle` them,
+  and reports anything nothing will take. A reminder gated by a geofence with
+  only the notification backend installed is unroutable, and saying so is better
+  than letting it disappear.
+- **Combines budgets** across backends. Capacities add, because each
+  registration goes to exactly one backend. Horizons do not — the shortest wins,
+  since scheduling past a backend's horizon hands it work it will not keep.
+- **Cancels before registering,** so a tight platform allowance is freed before
+  more is asked of it.
+
+## Storage
+
+`PrefsReminderStore` is a `ReminderStore` over `shared_preferences`, using
+`ReminderCodec` for the format. Deliberately the simplest thing that survives a
+restart — the point is that the codec is all you need to put reminders in
+whatever database you already have, and that the reconciler cannot tell the
+difference.
+
+A reminder that fails to decode is dropped rather than taking the whole store
+down with it. One corrupt row should not cost the user every other reminder.

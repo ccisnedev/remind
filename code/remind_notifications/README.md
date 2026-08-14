@@ -78,6 +78,47 @@ Note that this only affects **ambient** conditions. Everything time-based —
 date ranges, excluded dates, weekdays, time-of-day windows — is resolved by the
 occurrence engine before scheduling, so those reminders schedule normally.
 
+## Android setup
+
+Two things are required, and the first one fails the build rather than failing
+quietly, so you will find it immediately.
+
+**Core library desugaring.** `flutter_local_notifications` uses `java.time`,
+which is only native from API 26. Without desugaring the build stops with
+*"Dependency ':flutter_local_notifications' requires core library desugaring"*.
+In `android/app/build.gradle.kts`:
+
+```kotlin
+android {
+    compileOptions {
+        isCoreLibraryDesugaringEnabled = true
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+}
+```
+
+**The notification permission.** Android 13+ needs `POST_NOTIFICATIONS` declared
+and requested at runtime. Declared in `AndroidManifest.xml`:
+
+```xml
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+```
+
+and requested before wiring the backend up:
+
+```dart
+await plugin
+    .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>()
+    ?.requestNotificationsPermission();
+```
+
+Note what is *not* required: no location permission of any kind, and no
+`SCHEDULE_EXACT_ALARM`.
+
 ## Android exactness
 
 `FlutterLocalNotificationsScheduler` defaults to

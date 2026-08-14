@@ -1,0 +1,36 @@
+name: remind_app
+description: >-
+  Demonstration app for the remind ecosystem. Exercises remind_core and
+  remind_notifications against a real device, with no location dependency at
+  all — the configuration most applications embedding reminders actually want.
+publish_to: none
+version: 0.1.0
+
+environment:
+  flutter: '>=3.19.0'
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_local_notifications: ^22.3.0
+  flutter_timezone: ^5.1.0
+  remind_core: ^0.1.0
+  remind_notifications: ^0.1.0
+  shared_preferences: ^2.5.5
+  timezone: '>=0.10.0 <0.12.0'
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
+
+# Neither package is on pub.dev yet.
+dependency_overrides:
+  remind_core:
+    path: ../remind_core
+  remind_notifications:
+    path: ../remind_notifications
+
+flutter:
+  uses-material-design: true
