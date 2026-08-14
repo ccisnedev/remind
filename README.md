@@ -37,8 +37,8 @@ that solves them is plain Dart with no device in sight.
 
 | Package | What it does | Status |
 |---|---|---|
-| [`remind_core`](code/remind_core) | Model and occurrence engine. Pure Dart, no Flutter. | **0.1.0** |
-| `remind_notifications` | Delivery via `flutter_local_notifications`. | Planned |
+| [`remind_core`](code/remind_core) | Model, occurrence engine, reconciler and ports. Pure Dart, no Flutter. | **0.1.0** |
+| [`remind_notifications`](code/remind_notifications) | Delivery via `flutter_local_notifications`. Date and time only — declares no location permission. | **0.1.0** |
 | `remind_alarm` | Delivery via `alarm` / AlarmKit, for reminders that must ring. | Planned |
 | `remind_geofence` | Region monitoring on Android and iOS. | Planned |
 | `remind` | Umbrella: core plus notification delivery, preconfigured. | Planned |
@@ -94,8 +94,8 @@ is free to hold things that are not Dart packages.
 ```
 remind/
 ├── code/
-│   ├── remind_core/      the engine
-│   └── app/              demo surface
+│   ├── remind_core/          the engine
+│   └── remind_notifications/ local-notification delivery
 └── docs/
     ├── architecture.md   decision record
     ├── roadmap.md

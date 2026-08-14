@@ -1,0 +1,31 @@
+name: remind_notifications
+description: >-
+  Delivers remind_core reminders as local notifications on Android and iOS,
+  backed by flutter_local_notifications. Time and date reminders only — no
+  location permissions are declared or required.
+version: 0.1.0
+repository: https://github.com/ccisnedev/remind
+issue_tracker: https://github.com/ccisnedev/remind/issues
+
+environment:
+  flutter: '>=3.19.0'
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_local_notifications: ^22.3.0
+  meta: ^1.16.0
+  remind_core: ^0.1.0
+  timezone: '>=0.10.0 <0.12.0'
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
+
+# remind_core is not on pub.dev yet. Once it is published this block goes away
+# and the hosted constraint above takes over.
+dependency_overrides:
+  remind_core:
+    path: ../remind_core

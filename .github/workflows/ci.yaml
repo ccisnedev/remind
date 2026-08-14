@@ -1,8 +1,9 @@
 name: CI
 
 # Each package under `code/` is self-contained, so every job scopes itself to
-# one package directory. Adding a package means adding it to the matrix — there
-# is no workspace root resolving them together.
+# one package directory. Adding a package means adding it to the matrix of the
+# job matching its toolchain — there is no workspace root resolving them
+# together.
 
 on:
   push:
@@ -12,7 +13,7 @@ on:
 
 jobs:
   dart-package:
-    name: ${{ matrix.package }}
+    name: dart / ${{ matrix.package }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -43,6 +44,36 @@ jobs:
 
       - name: Check the package is publishable
         run: dart pub publish --dry-run
+
+  flutter-package:
+    name: flutter / ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - remind_notifications
+    defaults:
+      run:
+        working-directory: code/${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
 
   example:
     name: remind_core example
