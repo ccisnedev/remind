@@ -172,23 +172,68 @@ evaluateCondition(
 ); // ConditionOutcome.fails
 ```
 
+## Reconciliation
+
+`Reconciler` is what makes the platform ceilings survivable. Rather than
+registering every occurrence of every reminder, it registers a bounded window
+and expects to run again as that window is consumed — on launch, on resume,
+after a reboot, after a time zone change, and whenever a reminder is edited.
+
+```dart
+const reconciler = Reconciler();
+
+final plan = reconciler.plan(
+  reminders: await store.all(),
+  registered: await backend.pendingRegistrations(),
+  zone: zone,
+  now: tz.TZDateTime.now(zone),
+  budget: const SchedulingBudget(maxTimed: 48),
+);
+
+for (final key in plan.toCancel) await backend.cancel(key);
+for (final registration in plan.toRegister) await backend.register(registration);
+```
+
+A plan is pure data — it describes work without doing any — so it can be
+inspected, logged, or asserted on in a test.
+
+Four properties are worth knowing:
+
+- **Keys are derived, not allocated.** `RegistrationKey` is a deterministic
+  function of the reminder and the instant, so desired and actual state can be
+  compared without keeping a ledger that could drift, corrupt, or be lost on
+  reinstall. The key can even recover its own instant, which is how the
+  reconciler avoids asking the platform to cancel something that already fired.
+- **Selection is fair, not soonest-first.** Occurrences are taken round-robin
+  across reminders. Taking the globally soonest would let one frequent reminder
+  consume the whole budget, leaving the user with one reminder that works and
+  several that appear broken.
+- **Foreign registrations are never cancelled.** Keys the library did not create
+  are reported in `plan.unknown` and left alone, so an application scheduling
+  its own notifications alongside `remind` keeps them.
+- **Dropped regions are reported.** iOS monitors 20 regions; anything beyond the
+  budget lands in `plan.droppedRegions` rather than vanishing, because a
+  silently dropped geofence is indistinguishable from a broken one.
+
 ## Scope
 
 This package deliberately does **not**:
 
-- Show notifications, ring alarms, or register geofences.
-- Persist anything. `Reminder` is a value type; storage is yours or an adapter's.
+- Show notifications, ring alarms, or register geofences. It describes the work;
+  a `ReminderBackend` implementation performs it.
+- Persist anything beyond `InMemoryReminderStore`. Implement `ReminderStore`
+  over whatever database the application already uses.
 - Talk to the platform, request permissions, or depend on Flutter.
-
-Reconciliation — diffing the desired schedule against what the OS currently
-holds, managing the iOS window, re-registering after a reboot — is the next
-layer up and is not in this release yet.
 
 ## Status
 
-Version 0.1.0. The model and the occurrence engine are complete and tested; the
-API may still shift before 1.0. Location triggers are modelled here, but no
-adapter registers them yet.
+Version 0.1.0. Model, occurrence engine, reconciler and ports are complete and
+tested; the API may still shift before 1.0.
+
+No backend implements `ReminderBackend` yet, so nothing reaches a device — that
+is what the adapter packages are for. There is deliberately no orchestration
+layer wiring store, reconciler and backend together: designing one before a real
+backend exists would be guesswork.
 
 ## Licence
 
