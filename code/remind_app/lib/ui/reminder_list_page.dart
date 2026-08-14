@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:remind_core/remind_core.dart';
+import 'package:remind_notifications/remind_notifications.dart';
 
 import '../runtime/remind_runtime.dart';
 import 'formatting.dart';
@@ -32,6 +35,31 @@ class ReminderListPage extends StatefulWidget {
 
 class _ReminderListPageState extends State<ReminderListPage> {
   RemindRuntime get _runtime => widget.runtime;
+
+  bool _deliversExactly = true;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_checkPrecision());
+  }
+
+  /// Asks the backend what precision it will actually deliver.
+  ///
+  /// Re-checked rather than assumed, because the permission behind it lives in
+  /// system settings and the user can revoke it at any time, including while
+  /// this screen is open.
+  Future<void> _checkPrecision() async {
+    final backend = _runtime.backends.whereType<NotificationBackend>().first;
+    final exact = await backend.deliversExactly;
+    if (mounted) setState(() => _deliversExactly = exact);
+  }
+
+  Future<void> _requestExactPermission() async {
+    final backend = _runtime.backends.whereType<NotificationBackend>().first;
+    await backend.requestExactPermission();
+    await _checkPrecision();
+  }
 
   Future<void> _reconcileAndReport() async {
     final result = await _runtime.reconcile();
@@ -121,13 +149,25 @@ class _ReminderListPageState extends State<ReminderListPage> {
             if (reminders == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (reminders.isEmpty) return const _EmptyState();
+            if (reminders.isEmpty) {
+              return Column(
+                children: [
+                  if (!_deliversExactly)
+                    _ImprecisionWarning(onFix: _requestExactPermission),
+                  const Expanded(child: _EmptyState()),
+                ],
+              );
+            }
 
             return ListView.separated(
               padding: const EdgeInsets.only(bottom: 96),
-              itemCount: reminders.length,
+              itemCount: reminders.length + (_deliversExactly ? 0 : 1),
               separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, index) {
+              itemBuilder: (context, rawIndex) {
+                if (!_deliversExactly && rawIndex == 0) {
+                  return _ImprecisionWarning(onFix: _requestExactPermission);
+                }
+                final index = _deliversExactly ? rawIndex : rawIndex - 1;
                 final reminder = reminders[index];
                 return _ReminderTile(
                   reminder: reminder,
@@ -167,6 +207,65 @@ class _ReminderListPageState extends State<ReminderListPage> {
           ],
         ),
       );
+}
+
+/// Says plainly that reminders will not arrive on time.
+///
+/// Shown rather than swallowed because the whole point of a reminder is the
+/// moment it arrives. Silently degrading to "sometime within the hour" would
+/// leave the user trusting something that no longer does what they asked, and
+/// they would only discover it by missing whatever it was for.
+class _ImprecisionWarning extends StatelessWidget {
+  const _ImprecisionWarning({required this.onFix});
+
+  final VoidCallback onFix;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      color: theme.colorScheme.errorContainer,
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+      child: Row(
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            color: theme.colorScheme.onErrorContainer,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Reminders may arrive late',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Without permission for exact alarms, Android batches them to '
+                  'save battery — up to an hour late for anything scheduled '
+                  'overnight.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: onFix,
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.onErrorContainer,
+            ),
+            child: const Text('Fix'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _EmptyState extends StatelessWidget {

@@ -57,6 +57,20 @@ final class NotificationBackend implements ReminderBackend {
   @override
   Future<bool> get isAvailable => _scheduler.areNotificationsEnabled();
 
+  /// Whether reminders scheduled now will fire at the instant asked for.
+  ///
+  /// When false, delivery is subject to the platform batching alarms to save
+  /// battery — seconds late for something a minute away, up to an hour for
+  /// something scheduled overnight. Applications for which lateness is worse
+  /// than silence should surface this rather than let reminders drift quietly.
+  Future<bool> get deliversExactly => _scheduler.canDeliverExactly();
+
+  /// Asks the user for permission to deliver exactly.
+  ///
+  /// On Android 14 and later this sends them to system settings, since the
+  /// permission cannot be granted from within the app.
+  Future<bool> requestExactPermission() => _scheduler.requestExactPermission();
+
   @override
   Future<Set<RegistrationKey>> pendingRegistrations() async {
     final pending = await _scheduler.pending();

@@ -10,9 +10,20 @@ final class FakeScheduler implements NotificationScheduler {
   final List<ScheduledNotification> scheduled = [];
   final List<int> cancelled = [];
   bool enabled = true;
+  bool exact = true;
+  int exactPermissionRequests = 0;
 
   @override
   Future<bool> areNotificationsEnabled() async => enabled;
+
+  @override
+  Future<bool> canDeliverExactly() async => exact;
+
+  @override
+  Future<bool> requestExactPermission() async {
+    exactPermissionRequests++;
+    return exact;
+  }
 
   @override
   Future<void> schedule(ScheduledNotification notification) async {
@@ -148,6 +159,39 @@ void main() {
 
       scheduler.enabled = false;
       expect(await backend.isAvailable, isFalse);
+    });
+  });
+
+  group('precision', () {
+    test('reports what the platform will actually do', () async {
+      expect(await backend.deliversExactly, isTrue);
+
+      scheduler.exact = false;
+      expect(await backend.deliversExactly, isFalse);
+    });
+
+    test('losing exactness does not make the backend unavailable', () async {
+      // Degrading is the platform's business; deciding whether a late reminder
+      // is acceptable is the application's. Conflating them would leave an app
+      // that tolerates lateness with nothing scheduled at all.
+      scheduler.exact = false;
+
+      expect(await backend.isAvailable, isTrue);
+      expect(await backend.deliversExactly, isFalse);
+    });
+
+    test('permission can be requested through the backend', () async {
+      expect(await backend.requestExactPermission(), isTrue);
+      expect(scheduler.exactPermissionRequests, 1);
+    });
+
+    test('reminders still schedule when exactness is unavailable', () async {
+      // Refusing to schedule would turn "possibly late" into "definitely
+      // never", which is strictly worse whatever the application's policy.
+      scheduler.exact = false;
+      await backend.register(timedAt(11));
+
+      expect(scheduler.scheduled, hasLength(1));
     });
   });
 

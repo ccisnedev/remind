@@ -14,6 +14,18 @@
          happened and the user silently stops being reminded. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
+    <!-- Exact delivery. Android 14 denies this by default; the user grants it
+         from Settings → Apps → this app → Alarms & reminders, and the app can
+         only send them there.
+
+         SCHEDULE_EXACT_ALARM rather than USE_EXACT_ALARM on purpose. The
+         latter is granted silently at install with no prompt, but Google Play
+         restricts it to apps whose *core* function is a clock, alarm or
+         calendar, and reviews for it. A reminder feature embedded in an app
+         that does something else does not qualify, so this demo shows the flow
+         those apps will actually face. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+
     <application
         android:label="remind_app"
         android:name="${applicationName}"

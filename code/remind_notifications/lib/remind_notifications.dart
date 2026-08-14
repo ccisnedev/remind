@@ -36,6 +36,7 @@
 /// ```
 library;
 
+export 'src/exactness.dart' show ExactnessPolicy;
 export 'src/flutter_local_notifications_scheduler.dart'
     show FlutterLocalNotificationsScheduler;
 export 'src/notification_backend.dart' show NotificationBackend;

@@ -169,27 +169,70 @@ await plugin
 Note what is *not* required: no location permission of any kind, and no
 `SCHEDULE_EXACT_ALARM`.
 
-## Android exactness
+## Exactness
 
-`FlutterLocalNotificationsScheduler` defaults to
-`AndroidScheduleMode.inexactAllowWhileIdle`.
+Android batches alarms to save battery, and the window it allows itself widens
+with distance. Measured on a device:
 
-This is deliberate. The exact modes require `SCHEDULE_EXACT_ALARM`, which
-Android 14 denies by default and which
-[Google Play restricts](https://support.google.com/googleplay/android-developer/answer/16558241)
-to applications whose core function is a clock, alarm or calendar. An embedded
-reminder rarely qualifies, so an exact default would fail on most installations
-— and fail quietly, which is worse than firing a few minutes late.
+| Scheduled | Window Android allowed | Fired |
+|---|---|---|
+| 21 seconds out | ~0 | 16 s late |
+| 2 minutes out | 61 s | 61 s late |
+| 12 hours out | **1 hour** | — |
 
-If your application genuinely needs to-the-minute delivery and qualifies for the
-permission, opt in and request it yourself:
+For a reminder that just needs to land sometime that morning, that is fine and
+costs no permission at all. For a medication interval or a meeting, arriving
+fifteen minutes late can be worse than never arriving. Only the application
+knows which it is, so `ExactnessPolicy` makes it a choice:
 
 ```dart
 FlutterLocalNotificationsScheduler(
   plugin: plugin,
   details: details,
-  androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+  exactness: ExactnessPolicy.requireExact,
 );
+```
+
+| Policy | Permission needed | Behaviour |
+|---|---|---|
+| `inexact` | none | Always batched. Works everywhere, no prompt |
+| `preferExact` (default) | optional | Exact when granted, batched when not |
+| `requireExact` | yes | Exact when granted; still schedules when not, and reports the degradation |
+
+**No policy ever fails silently, and none refuses to schedule.** Turning
+"possibly late" into "definitely never" would be strictly worse whatever your
+policy, so the scheduler always registers the reminder and tells you the truth
+about it instead:
+
+```dart
+if (!await backend.deliversExactly) {
+  // Ask, and tell the user if they decline.
+  await backend.requestExactPermission();
+}
+```
+
+### The permission, and the trap in it
+
+Android offers two, and picking the wrong one can get your app rejected.
+
+**`SCHEDULE_EXACT_ALARM`** — denied by default since Android 14. Only the user
+can grant it, from Settings → Apps → your app → Alarms & reminders.
+`requestExactPermission()` sends them there; it cannot be granted in-app. Safe
+for any application.
+
+**`USE_EXACT_ALARM`** — granted automatically at install with no prompt, but
+[Google Play restricts it](https://support.google.com/googleplay/android-developer/answer/16558241)
+to applications whose **core** function is a clock, alarm or calendar, and
+reviews for it. A reminder feature embedded in an app that does something else
+does **not** qualify, and declaring it risks rejection.
+
+So: if reminders are the point of your app, `USE_EXACT_ALARM`. If reminders are
+a feature of an app that does something else — the case this ecosystem exists
+for — declare `SCHEDULE_EXACT_ALARM`, ask for it, and be honest when the answer
+is no.
+
+```xml
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
 ```
 
 ## Testing

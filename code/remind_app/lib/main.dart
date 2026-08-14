@@ -42,17 +42,28 @@ Future<void> main() async {
       ?.requestNotificationsPermission();
 
   final store = await PrefsReminderStore.open();
+
+  // Exactness is a hard requirement here: a reminder that arrives fifteen
+  // minutes late is worse than one that never arrives at all.
+  final backend = NotificationBackend(
+    scheduler: FlutterLocalNotificationsScheduler(
+      plugin: plugin,
+      details: _details,
+      exactness: ExactnessPolicy.requireExact,
+    ),
+  );
+
+  // Android 14 denies the permission by default, so ask once at startup. If
+  // the user refuses, the app keeps working and says so rather than delivering
+  // late without mentioning it.
+  if (!await backend.deliversExactly) {
+    await backend.requestExactPermission();
+  }
+
   final runtime = RemindRuntime(
     store: store,
     zone: zone,
-    backends: [
-      NotificationBackend(
-        scheduler: FlutterLocalNotificationsScheduler(
-          plugin: plugin,
-          details: _details,
-        ),
-      ),
-    ],
+    backends: [backend],
   );
 
   // The platform holds only a window, so it has to be refilled every launch.

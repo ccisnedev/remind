@@ -85,6 +85,26 @@ abstract interface class NotificationScheduler {
   /// Whether the user has allowed notifications.
   Future<bool> areNotificationsEnabled();
 
+  /// Whether the next [schedule] call will honour its instant precisely.
+  ///
+  /// False means delivery is subject to the platform batching alarms for
+  /// battery, which on Android widens with distance: seconds for something a
+  /// minute away, up to a full hour for something scheduled overnight.
+  ///
+  /// Reported rather than assumed, because whether it is true depends on a
+  /// permission the user controls and can revoke at any time. An application
+  /// for which lateness is worse than silence needs to be able to ask.
+  Future<bool> canDeliverExactly();
+
+  /// Asks the user for permission to deliver exactly, returning whether it was
+  /// granted.
+  ///
+  /// On Android 14 and later this permission is denied by default and can only
+  /// be granted from system settings, so this typically sends the user there
+  /// rather than showing an in-app prompt. Returns false where the concept does
+  /// not apply.
+  Future<bool> requestExactPermission();
+
   /// Schedules [notification], replacing any existing one with the same id.
   Future<void> schedule(ScheduledNotification notification);
 

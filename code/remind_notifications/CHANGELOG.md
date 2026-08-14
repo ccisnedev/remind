@@ -36,10 +36,14 @@ no exception, no log, no notification.
   there is no moment at which an ambient condition could be evaluated. Only
   ambient conditions are affected; time-based ones are resolved before
   scheduling.
-- **Android defaults to inexact scheduling.** Exact alarms require
-  `SCHEDULE_EXACT_ALARM`, denied by default on Android 14 and restricted by
-  Google Play to clock, alarm and calendar applications. Opt in via
-  `androidScheduleMode` if your application qualifies.
+- **`ExactnessPolicy`** — `inexact`, `preferExact` (default) or `requireExact`.
+  Android batches alarms for battery and the window widens with distance:
+  measured at ~0 for one scheduled 21 seconds out, 61 seconds at two minutes,
+  and a full hour at twelve. Whether that matters is a product decision, so the
+  library does not make it. `deliversExactly` reports what will actually happen
+  and `requestExactPermission()` asks for the permission — no policy fails
+  silently, and none refuses to schedule, since "definitely never" is worse than
+  "possibly late" under any policy.
 - **iOS availability is assumed.** iOS grants or refuses notification permission
   during initialisation and offers no equivalent query, so `isAvailable` reports
   `true` there. Check with the plugin's own permission API if you need certainty.
