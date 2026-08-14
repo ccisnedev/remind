@@ -42,6 +42,32 @@ the requirement is documented loudly in the `remind_notifications` README.
 Note what the manifest still does *not* contain: any location permission, and
 `SCHEDULE_EXACT_ALARM`.
 
+## Exactness
+
+The app uses `ExactnessPolicy.requireExact` and declares
+`SCHEDULE_EXACT_ALARM`, because for a reminder a quarter of an hour late is
+often worse than one that never came.
+
+Android 14 denies that permission by default, so the app asks at startup —
+which opens system settings, since it cannot be granted in-app. If the user
+declines, the app keeps working and says so: a banner across the top of the
+list explains that reminders may arrive late, with an action that reopens the
+settings page. Nothing degrades quietly.
+
+`SCHEDULE_EXACT_ALARM` rather than `USE_EXACT_ALARM` on purpose. The latter is
+granted silently at install, but Google Play restricts it to apps whose *core*
+function is a clock, alarm or calendar. A reminder feature inside an app that
+does something else does not qualify — so this demo shows the flow those apps
+will actually face rather than the easy path it cannot use.
+
+One trap worth knowing: `adb shell dumpsys package` reports this permission as
+`granted=false` even once the user has allowed it. It is backed by an app op,
+so the real answer comes from:
+
+```sh
+adb shell cmd appops get your.package.name SCHEDULE_EXACT_ALARM
+```
+
 ## Running it
 
 ```sh
