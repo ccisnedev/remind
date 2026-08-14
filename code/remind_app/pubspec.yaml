@@ -25,10 +25,11 @@ dev_dependencies:
     sdk: flutter
   lints: ^6.0.0
 
-# Neither package is on pub.dev yet.
+# remind_core now comes from pub.dev like any other dependency, which is the
+# point: the app proves the published package works, not a local copy of it.
+# remind_notifications is still overridden because it is not published yet;
+# this block goes away entirely once it is.
 dependency_overrides:
-  remind_core:
-    path: ../remind_core
   remind_notifications:
     path: ../remind_notifications
 

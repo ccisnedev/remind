@@ -23,9 +23,3 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^6.0.0
-
-# remind_core is not on pub.dev yet. Once it is published this block goes away
-# and the hosted constraint above takes over.
-dependency_overrides:
-  remind_core:
-    path: ../remind_core
