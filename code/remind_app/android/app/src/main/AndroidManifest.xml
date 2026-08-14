@@ -9,6 +9,11 @@
          which needs no permission and is not restricted by Play policy. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- So reminders survive a reboot. Android clears every scheduled alarm
+         when the device restarts; without this the plugin never learns that it
+         happened and the user silently stops being reminded. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
     <application
         android:label="remind_app"
         android:name="${applicationName}"
@@ -35,6 +40,27 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- REQUIRED for scheduled notifications to appear at all.
+             Since flutter_local_notifications v16 the plugin no longer declares
+             its own receivers, so every app has to. Omit these and the failure
+             is completely silent: the alarm is registered, it fires on time,
+             the system logs the broadcast — and nothing runs, because it is
+             addressed to a component that was never declared. No exception, no
+             error in logcat, just a reminder that never arrives. -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

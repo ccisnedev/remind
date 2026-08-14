@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:remind_core/remind_core.dart';
 
 import '../runtime/remind_runtime.dart';
@@ -8,10 +9,21 @@ import 'reminder_edit_page.dart';
 /// The main screen: every reminder, what it does, and when it fires next.
 class ReminderListPage extends StatefulWidget {
   /// Creates the list.
-  const ReminderListPage({required this.runtime, super.key});
+  const ReminderListPage({
+    required this.runtime,
+    required this.plugin,
+    required this.details,
+    super.key,
+  });
 
   /// The wiring of store, reconciler and backends.
   final RemindRuntime runtime;
+
+  /// The notification plugin, threaded through for the diagnostics self-test.
+  final FlutterLocalNotificationsPlugin plugin;
+
+  /// The details scheduled reminders are delivered with.
+  final NotificationDetails details;
 
   @override
   State<ReminderListPage> createState() => _ReminderListPageState();
@@ -84,7 +96,13 @@ class _ReminderListPageState extends State<ReminderListPage> {
               tooltip: 'Reconciliation plan',
               icon: const Icon(Icons.fact_check_outlined),
               onPressed: () => Navigator.of(context).push<void>(
-                MaterialPageRoute(builder: (_) => PlanPage(runtime: _runtime)),
+                MaterialPageRoute(
+                  builder: (_) => PlanPage(
+                    runtime: _runtime,
+                    plugin: widget.plugin,
+                    details: widget.details,
+                  ),
+                ),
               ),
             ),
             IconButton(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:remind_core/remind_core.dart';
 
 import '../runtime/remind_runtime.dart';
@@ -12,14 +13,56 @@ import 'reminder_list_page.dart' show formatInstant;
 /// end of the budget, or whether nothing installed could deliver it.
 class PlanPage extends StatelessWidget {
   /// Creates the diagnostics screen.
-  const PlanPage({required this.runtime, super.key});
+  const PlanPage({
+    required this.runtime,
+    required this.plugin,
+    required this.details,
+    super.key,
+  });
 
   /// The wiring of store, reconciler and backends.
   final RemindRuntime runtime;
 
+  /// The notification plugin, for the immediate self-test.
+  final FlutterLocalNotificationsPlugin plugin;
+
+  /// The details scheduled reminders are delivered with.
+  final NotificationDetails details;
+
+  /// Posts a notification right now, bypassing all scheduling.
+  ///
+  /// The discriminator when a reminder does not arrive: if this appears,
+  /// notification setup is sound and the fault is in scheduling or delivery.
+  /// If it does not, nothing about scheduling matters yet.
+  Future<void> _postNow(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await plugin.show(
+        id: 999999,
+        title: 'Immediate test',
+        body: 'Posted directly, with no alarm involved',
+        notificationDetails: details,
+      );
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Posted — check the shade')),
+      );
+    } on Object catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('Failed: $error')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Reconciliation plan')),
+        appBar: AppBar(
+          title: const Text('Reconciliation plan'),
+          actions: [
+            IconButton(
+              tooltip: 'Post a notification now',
+              icon: const Icon(Icons.notification_add_outlined),
+              onPressed: () => _postNow(context),
+            ),
+          ],
+        ),
         body: FutureBuilder<ReconciliationPlan>(
           future: runtime.preview(),
           builder: (context, snapshot) {

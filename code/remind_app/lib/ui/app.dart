@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../runtime/remind_runtime.dart';
 import 'reminder_list_page.dart';
@@ -13,10 +14,21 @@ import 'reminder_list_page.dart';
 /// it should. Nothing else will notice.
 class RemindApp extends StatefulWidget {
   /// Creates the app around [runtime].
-  const RemindApp({required this.runtime, super.key});
+  const RemindApp({
+    required this.runtime,
+    required this.plugin,
+    required this.details,
+    super.key,
+  });
 
   /// The wiring of store, reconciler and backends.
   final RemindRuntime runtime;
+
+  /// The notification plugin, threaded through for the diagnostics self-test.
+  final FlutterLocalNotificationsPlugin plugin;
+
+  /// The details scheduled reminders are delivered with.
+  final NotificationDetails details;
 
   @override
   State<RemindApp> createState() => _RemindAppState();
@@ -57,6 +69,10 @@ class _RemindAppState extends State<RemindApp> with WidgetsBindingObserver {
           ),
           useMaterial3: true,
         ),
-        home: ReminderListPage(runtime: widget.runtime),
+        home: ReminderListPage(
+          runtime: widget.runtime,
+          plugin: widget.plugin,
+          details: widget.details,
+        ),
       );
 }

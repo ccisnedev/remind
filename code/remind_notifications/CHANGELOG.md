@@ -16,6 +16,15 @@ First release.
   own payload through the platform, since the platform reports only an integer
   id and a payload string and the integer is a lossy hash.
 
+### Required host setup
+
+Documented in the README, and worth repeating because one of them fails
+silently: since `flutter_local_notifications` v16 the plugin no longer declares
+its own receivers, so the host app must declare `ScheduledNotificationReceiver`
+and `ScheduledNotificationBootReceiver` in its manifest. Without them the alarm
+is registered, fires on time, and delivers to a component that does not exist —
+no exception, no log, no notification.
+
 ### Deliberate limits
 
 - **No location.** No permission is declared or requested, and `maxRegions` is

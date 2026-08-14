@@ -27,6 +27,21 @@ the UTC offset shown, so a transition is visible as the offset moving while the
 wall clock stays put. Occurrences that a transition erased or duplicated are
 flagged.
 
+## The manifest is not boilerplate
+
+`android/app/src/main/AndroidManifest.xml` declares
+`ScheduledNotificationReceiver` and `ScheduledNotificationBootReceiver`. Since
+`flutter_local_notifications` v16 the plugin no longer declares them, and
+without them **nothing ever fires** — silently. The alarm registers, fires on
+time, the system logs the broadcast to a component that does not exist, and
+that is the end of it. No exception, no error, no notification.
+
+This app was built without them at first and lost an hour to it, which is why
+the requirement is documented loudly in the `remind_notifications` README.
+
+Note what the manifest still does *not* contain: any location permission, and
+`SCHEDULE_EXACT_ALARM`.
+
 ## Running it
 
 ```sh

@@ -58,7 +58,7 @@ Future<void> main() async {
   // The platform holds only a window, so it has to be refilled every launch.
   await runtime.reconcile();
 
-  runApp(RemindApp(runtime: runtime));
+  runApp(RemindApp(runtime: runtime, plugin: plugin, details: _details));
 }
 
 /// The device's own time zone, falling back to UTC if the platform will not

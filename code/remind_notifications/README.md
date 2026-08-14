@@ -80,8 +80,58 @@ occurrence engine before scheduling, so those reminders schedule normally.
 
 ## Android setup
 
-Two things are required, and the first one fails the build rather than failing
-quietly, so you will find it immediately.
+Three things are required. Read the third one even if you skim the rest: it is
+the only one that fails **silently**, and it is the reason most "my scheduled
+notification never arrives" reports exist.
+
+### 1. Declare the plugin's receivers — or nothing will ever fire
+
+Since `flutter_local_notifications` v16 the plugin no longer declares its own
+receivers, so **your app must**. Add this between the `<application>` tags of
+`android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<receiver
+    android:exported="false"
+    android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+<receiver
+    android:exported="false"
+    android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+    <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED"/>
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+        <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+        <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+    </intent-filter>
+</receiver>
+```
+
+and this between the `<manifest>` tags, so reminders survive a reboot — Android
+clears every scheduled alarm on restart:
+
+```xml
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+```
+
+**What it looks like when you forget.** Everything appears correct. The alarm is
+registered, it fires exactly on schedule, and the system logs the broadcast —
+addressed to a component that was never declared. Nothing runs. There is no
+exception, no error in logcat, and no notification. Permissions check out, the
+channel looks fine, `pendingRegistrations()` reports the work as scheduled.
+
+If you are staring at that, confirm it in one command:
+
+```sh
+adb shell dumpsys alarm | grep your.package.name
+```
+
+An entry naming `ScheduledNotificationReceiver` with an `OW=` in the past means
+the alarm fired. If no notification followed and there is no error, the receiver
+is not declared.
+
+### 2. Gradle and permissions
+
+Both of these fail loudly, so you will find them on your own.
 
 **Core library desugaring.** `flutter_local_notifications` uses `java.time`,
 which is only native from API 26. Without desugaring the build stops with
