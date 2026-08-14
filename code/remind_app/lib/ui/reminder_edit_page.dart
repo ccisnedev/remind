@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:remind_core/remind_core.dart';
 
+import '../runtime/remind_runtime.dart';
+import 'formatting.dart';
+
 /// The kinds of schedule this demo lets you build.
 ///
 /// A deliberate subset: it covers what an ordinary alarm clock offers, which
@@ -11,7 +14,10 @@ enum _Kind { daily, weekly, onceOnADate }
 /// Creates or edits a reminder.
 class ReminderEditPage extends StatefulWidget {
   /// Creates the editor, optionally over an [existing] reminder.
-  const ReminderEditPage({this.existing, super.key});
+  const ReminderEditPage({required this.runtime, this.existing, super.key});
+
+  /// Used to resolve the live preview of upcoming occurrences.
+  final RemindRuntime runtime;
 
   /// The reminder being edited, or `null` when creating one.
   final Reminder? existing;
@@ -75,6 +81,13 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
   bool get _isValid =>
       _title.text.trim().isNotEmpty &&
       (_kind != _Kind.weekly || _days.isNotEmpty);
+
+  /// The reminder as currently drafted, for previewing.
+  Reminder get _draft => Reminder(
+        id: widget.existing?.id ?? 'draft',
+        title: _title.text.trim().isEmpty ? 'Untitled' : _title.text.trim(),
+        triggers: [_trigger],
+      );
 
   void _save() {
     final existing = widget.existing;
@@ -186,11 +199,15 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
             if (_kind == _Kind.onceOnADate) ...[
               const Divider(),
               ListTile(
+                key: const ValueKey('date-tile'),
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.event),
                 title: const Text('Date'),
                 trailing: Text(
-                  '${_date.year}-${_two(_date.month)}-${_two(_date.day)}',
+                  formatDate(
+                    context,
+                    CalendarDate(_date.year, _date.month, _date.day),
+                  ),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 onTap: () async {
@@ -204,6 +221,8 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
                 },
               ),
             ],
+            const SizedBox(height: 24),
+            _Preview(occurrences: widget.runtime.upcoming(_draft, limit: 3)),
           ],
         ),
       );
@@ -228,5 +247,62 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
         Weekday.sunday => 'Sun',
       };
 
-  static String _two(int n) => n.toString().padLeft(2, '0');
+}
+
+/// Shows, live, when the reminder being edited would actually fire.
+///
+/// This exists because of a real mistake: a reminder was set for `01:19` on a
+/// phone whose clock reads `1:19 p. m.`, and nothing on the screen contradicted
+/// the assumption until the notification failed to arrive twelve hours later.
+/// Spelling out the next few occurrences in the device's own format makes an
+/// a.m./p.m. slip — or an unintended repeat — visible before saving rather than
+/// the following morning.
+class _Preview extends StatelessWidget {
+  const _Preview({required this.occurrences});
+
+  final List<Occurrence> occurrences;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.event_available_outlined,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text('This will fire', style: theme.textTheme.labelLarge),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (occurrences.isEmpty)
+              Text(
+                'Never — every occurrence is already in the past.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              )
+            else
+              for (final occurrence in occurrences)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text(
+                    formatInstant(context, occurrence.instant),
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
 }

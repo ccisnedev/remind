@@ -3,7 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:remind_core/remind_core.dart';
 
 import '../runtime/remind_runtime.dart';
-import 'reminder_list_page.dart' show formatInstant;
+import 'formatting.dart';
 
 /// Shows the reconciliation plan without applying it.
 ///
@@ -256,7 +256,7 @@ class _RegistrationTile extends StatelessWidget {
         TimedRegistration(:final occurrence, :final reminder) => ListTile(
             dense: true,
             title: Text(reminder.title),
-            subtitle: Text(formatInstant(occurrence.instant)),
+            subtitle: Text(formatInstantWithOffset(context, occurrence.instant)),
             trailing: occurrence.dstAnomaly == null
                 ? null
                 : Icon(

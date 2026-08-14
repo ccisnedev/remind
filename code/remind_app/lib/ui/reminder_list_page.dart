@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:remind_core/remind_core.dart';
 
 import '../runtime/remind_runtime.dart';
+import 'formatting.dart';
 import 'plan_page.dart';
 import 'reminder_edit_page.dart';
 
@@ -60,7 +61,8 @@ class _ReminderListPageState extends State<ReminderListPage> {
   Future<void> _edit([Reminder? existing]) async {
     final edited = await Navigator.of(context).push<Reminder>(
       MaterialPageRoute(
-        builder: (_) => ReminderEditPage(existing: existing),
+        builder: (_) =>
+            ReminderEditPage(runtime: _runtime, existing: existing),
       ),
     );
     if (edited == null) return;
@@ -226,7 +228,7 @@ class _ReminderTile extends StatelessWidget {
           decoration: reminder.enabled ? null : TextDecoration.lineThrough,
         ),
       ),
-      subtitle: Text(describeTriggers(reminder)),
+      subtitle: Text(describeTriggers(context, reminder)),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -251,7 +253,7 @@ class _ReminderTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            formatInstant(occurrence.instant),
+                            formatInstantWithOffset(context, occurrence.instant),
                             style: theme.textTheme.bodyMedium,
                           ),
                         ),
@@ -298,59 +300,3 @@ class _ReminderTile extends StatelessWidget {
     );
   }
 }
-
-/// A one-line summary of what makes a reminder fire.
-String describeTriggers(Reminder reminder) =>
-    reminder.triggers.map(_describeTrigger).join(' · ');
-
-String _describeTrigger(Trigger trigger) => switch (trigger) {
-      OneShotTrigger(:final date, :final time) => 'Once on $date at $time',
-      DailyTrigger(:final time, :final intervalDays) => intervalDays == 1
-          ? 'Every day at $time'
-          : 'Every $intervalDays days at $time',
-      WeeklyTrigger(:final days, :final time) =>
-        '${_describeDays(days)} at $time',
-      DateListTrigger(:final dates, :final time) =>
-        '${dates.length} dates at $time',
-      LocationTrigger(:final region, :final event) =>
-        'On ${event.name} of ${region.id}',
-    };
-
-String _describeDays(Set<Weekday> days) {
-  if (days.length == 7) return 'Every day';
-  if (days.length == 5 && days.containsAll(Weekday.workdays)) return 'Weekdays';
-  if (days.length == 2 && days.containsAll(Weekday.weekend)) return 'Weekends';
-  const short = {
-    Weekday.monday: 'Mon',
-    Weekday.tuesday: 'Tue',
-    Weekday.wednesday: 'Wed',
-    Weekday.thursday: 'Thu',
-    Weekday.friday: 'Fri',
-    Weekday.saturday: 'Sat',
-    Weekday.sunday: 'Sun',
-  };
-  final sorted = days.toList()..sort((a, b) => a.iso.compareTo(b.iso));
-  return sorted.map((d) => short[d]).join(', ');
-}
-
-/// Formats an instant the way a person reads it, keeping the UTC offset
-/// visible because that is what makes a daylight-saving shift legible.
-String formatInstant(DateTime instant) {
-  String two(int n) => n.toString().padLeft(2, '0');
-  final offset = instant.timeZoneOffset;
-  final sign = offset.isNegative ? '-' : '+';
-  final hours = two(offset.inHours.abs());
-  final minutes = two(offset.inMinutes.abs() % 60);
-  return '${instant.year}-${two(instant.month)}-${two(instant.day)} '
-      '${two(instant.hour)}:${two(instant.minute)} '
-      'UTC$sign$hours:$minutes';
-}
-
-/// Explains a daylight-saving anomaly in words.
-String describeAnomaly(DstAnomaly anomaly) => switch (anomaly) {
-      DstAnomaly.gapShifted =>
-        'This wall-clock time does not exist on that date — the clocks jump over '
-            'it. Shifted forward.',
-      DstAnomaly.ambiguousResolvedEarly =>
-        'This wall-clock time happens twice on that date. Resolved to the first.',
-    };
