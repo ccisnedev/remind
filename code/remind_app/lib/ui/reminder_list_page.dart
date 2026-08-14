@@ -5,7 +5,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:remind_core/remind_core.dart';
 import 'package:remind_notifications/remind_notifications.dart';
 
-import '../runtime/remind_runtime.dart';
 import 'formatting.dart';
 import 'plan_page.dart';
 import 'reminder_edit_page.dart';
@@ -57,12 +56,20 @@ class _ReminderListPageState extends State<ReminderListPage> {
 
   Future<void> _requestExactPermission() async {
     final backend = _runtime.backends.whereType<NotificationBackend>().first;
+    final wasExact = await backend.deliversExactly;
     await backend.requestExactPermission();
     await _checkPrecision();
+
+    // Gaining precision does not move any reminder, so every already-scheduled
+    // one keeps the imprecise delivery it was registered with. Only a forced
+    // re-registration migrates them.
+    if (!wasExact && _deliversExactly) {
+      await _runtime.reconcile(refreshAll: true);
+    }
   }
 
-  Future<void> _reconcileAndReport() async {
-    final result = await _runtime.reconcile();
+  Future<void> _reconcileAndReport({bool refreshAll = false}) async {
+    final result = await _runtime.reconcile(refreshAll: refreshAll);
     if (!mounted) return;
 
     final plan = result.plan;
@@ -139,6 +146,11 @@ class _ReminderListPageState extends State<ReminderListPage> {
               tooltip: 'Reconcile now',
               icon: const Icon(Icons.sync),
               onPressed: _reconcileAndReport,
+            ),
+            IconButton(
+              tooltip: 'Re-register everything',
+              icon: const Icon(Icons.restart_alt),
+              onPressed: () => _reconcileAndReport(refreshAll: true),
             ),
           ],
         ),

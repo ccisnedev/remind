@@ -81,6 +81,8 @@ export 'src/model/weekday.dart' show Weekday;
 export 'src/ports/reminder_backend.dart' show ReminderBackend;
 export 'src/ports/reminder_store.dart'
     show InMemoryReminderStore, ReminderStore;
+export 'src/runtime/remind_runtime.dart'
+    show ReconcileFailure, ReconcileResult, RemindRuntime;
 export 'src/scheduling/reconciler.dart' show ReconciliationPlan, Reconciler;
 export 'src/scheduling/registration.dart'
     show RegionRegistration, Registration, RegistrationKey, TimedRegistration;

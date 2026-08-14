@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:remind_core/remind_core.dart';
 import 'package:remind_notifications/remind_notifications.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import 'runtime/prefs_reminder_store.dart';
-import 'runtime/remind_runtime.dart';
 import 'ui/app.dart';
 
 /// The channel reminders are delivered on.

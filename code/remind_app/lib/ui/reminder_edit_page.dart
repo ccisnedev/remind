@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:remind_core/remind_core.dart';
 
-import '../runtime/remind_runtime.dart';
 import 'formatting.dart';
 
 /// The kinds of schedule this demo lets you build.

@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:remind_core/remind_core.dart';
 
-import '../runtime/remind_runtime.dart';
 import 'reminder_list_page.dart';
 
 /// The application shell.
