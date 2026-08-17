@@ -15,6 +15,13 @@ dependencies:
     sdk: flutter
   flutter_local_notifications: ^22.3.0
   flutter_timezone: ^5.1.0
+  # Not used for scheduling — geofencing is entirely Play services' job. This
+  # is here so the app can show where the device thinks it is, which is the
+  # first question when a geofence does not fire. It has a side effect that
+  # matters on an emulator: subscribing turns the location provider on, and
+  # without an active subscriber an injected `geo fix` is dropped and the
+  # provider stays at ProviderRequest[OFF] with no location at all.
+  geolocator: ^14.0.3
   native_geofence: ^1.3.1
   # Pinned below 13. permission_handler_android 14.0.0 ships a
   # build.gradle.kts that fails to compile against this project's Gradle and

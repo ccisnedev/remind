@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:remind_geofence/remind_geofence.dart';
 
 import 'formatting.dart';
@@ -22,15 +25,61 @@ class JournalPage extends StatefulWidget {
 
 class _JournalPageState extends State<JournalPage> {
   late Future<List<CrossingOutcome>> _entries;
+  StreamSubscription<Position>? _positions;
+  Position? _position;
+  Object? _positionError;
 
   @override
   void initState() {
     super.initState();
     _reload();
+    _watchPosition();
   }
 
-  void _reload() =>
-      setState(() => _entries = widget.journal.recent(limit: 100));
+  @override
+  void dispose() {
+    unawaited(_positions?.cancel());
+    super.dispose();
+  }
+
+  /// Follows the device's position while this screen is open.
+  ///
+  /// Two reasons, and the second one is not obvious. Showing where the device
+  /// thinks it is answers the first question anyone asks when a geofence does
+  /// not fire. And subscribing at all is what turns the platform's location
+  /// provider on: with nothing listening, Android leaves it at
+  /// `ProviderRequest[OFF]`, and on an emulator an injected location is simply
+  /// dropped — which makes geofences untestable there until something asks.
+  void _watchPosition() {
+    _positions =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 10,
+          ),
+        ).listen(
+          (position) {
+            if (mounted) {
+              setState(() {
+                _position = position;
+                _positionError = null;
+              });
+            }
+          },
+          onError: (Object error) {
+            if (mounted) setState(() => _positionError = error);
+          },
+        );
+  }
+
+  // A block body, not an arrow: `setState(() => _entries = future)` returns the
+  // assigned Future from the closure, and Flutter rejects a setState callback
+  // that returns one. The arrow form analyses cleanly and fails at runtime.
+  void _reload() {
+    setState(() {
+      _entries = widget.journal.recent(limit: 100);
+    });
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -52,26 +101,81 @@ class _JournalPageState extends State<JournalPage> {
         ),
       ],
     ),
-    body: FutureBuilder<List<CrossingOutcome>>(
-      future: _entries,
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text('Could not read: ${snapshot.error}'));
-        }
-        final entries = snapshot.data;
-        if (entries == null) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (entries.isEmpty) return const _Empty();
+    body: Column(
+      children: [
+        _WhereAmI(position: _position, error: _positionError),
+        const Divider(height: 1),
+        Expanded(
+          child: FutureBuilder<List<CrossingOutcome>>(
+            future: _entries,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text('Could not read: ${snapshot.error}'));
+              }
+              final entries = snapshot.data;
+              if (entries == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (entries.isEmpty) return const _Empty();
 
-        return ListView.separated(
-          itemCount: entries.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (context, index) => _OutcomeTile(outcome: entries[index]),
-        );
-      },
+              return ListView.separated(
+                itemCount: entries.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) =>
+                    _OutcomeTile(outcome: entries[index]),
+              );
+            },
+          ),
+        ),
+      ],
     ),
   );
+}
+
+/// Where the device thinks it is.
+///
+/// The first thing worth knowing when a geofence has not fired, and often the
+/// answer on its own: no fix at all, or a fix hundreds of metres from where the
+/// user is standing.
+class _WhereAmI extends StatelessWidget {
+  const _WhereAmI({required this.position, required this.error});
+
+  final Position? position;
+  final Object? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final (icon, text) = switch ((position, error)) {
+      (_, final Object e) => (Icons.location_disabled, 'No fix: $e'),
+      (final Position p, _) => (
+        Icons.my_location,
+        '${p.latitude.toStringAsFixed(5)}, '
+            '${p.longitude.toStringAsFixed(5)}  ±${p.accuracy.round()} m',
+      ),
+      _ => (Icons.location_searching, 'Waiting for a fix…'),
+    };
+
+    return Container(
+      width: double.infinity,
+      color: theme.colorScheme.surfaceContainerHighest,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Empty extends StatelessWidget {
