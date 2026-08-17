@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:remind_core/remind_core.dart';
+import 'package:remind_geofence/remind_geofence.dart';
 import 'package:remind_notifications/remind_notifications.dart';
 
 import 'formatting.dart';
+import 'journal_page.dart';
 import 'plan_page.dart';
 import 'reminder_edit_page.dart';
 
@@ -16,8 +18,12 @@ class ReminderListPage extends StatefulWidget {
     required this.runtime,
     required this.plugin,
     required this.details,
+    required this.journal,
     super.key,
   });
+
+  /// Where crossing outcomes are recorded, including the silent ones.
+  final CrossingJournal journal;
 
   /// The wiring of store, reconciler and backends.
   final RemindRuntime runtime;
@@ -124,6 +130,72 @@ class _ReminderListPageState extends State<ReminderListPage> {
     await _reconcileAndReport();
   }
 
+  /// A region at a fixed, known coordinate, for exercising geofencing.
+  ///
+  /// Deliberately not "wherever the device is now": a test needs a boundary you
+  /// can stand outside of and then cross on purpose. With a fixed point the
+  /// emulator can be teleported across it with `adb emu geo fix`, which is the
+  /// only practical way to test an exit — the alternative on real hardware is
+  /// walking two hundred metres and back.
+  static const GeoRegion _testRegion = GeoRegion(
+    id: 'test-region',
+    center: GeoCoordinate(-33.4372, -70.6506),
+    radiusMetres: 200,
+  );
+
+  Future<void> _createGeofenceTest({Condition? condition}) async {
+    final reminder = Reminder(
+      id: 'geofence-${DateTime.now().microsecondsSinceEpoch}',
+      title: condition == null ? 'Arrived' : 'Arrived, conditionally',
+      body: 'You crossed into ${_testRegion.id}',
+      triggers: [
+        const LocationTrigger(region: _testRegion, event: GeoEvent.enter),
+      ],
+      condition: condition,
+    );
+    await _runtime.store.save(reminder);
+    await _reconcileAndReport();
+  }
+
+  Future<void> _offerGeofenceTests() async {
+    final choice = await showModalBottomSheet<Condition?>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('Geofence test'),
+              subtitle: Text(
+                'Creates a region at a fixed coordinate so a crossing can be '
+                'simulated. Watch Crossings to see what happened.',
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.place_outlined),
+              title: const Text('Unconditional'),
+              subtitle: const Text('Should notify on entry'),
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            ListTile(
+              leading: const Icon(Icons.do_not_disturb_on_outlined),
+              title: const Text('Weekdays only'),
+              subtitle: const Text(
+                'Suppressed at the weekend — and the journal says why',
+              ),
+              onTap: () => Navigator.of(
+                context,
+              ).pop(WeekdaysCondition(Weekday.workdays)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _createGeofenceTest(condition: choice);
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
@@ -146,6 +218,15 @@ class _ReminderListPageState extends State<ReminderListPage> {
               tooltip: 'Reconcile now',
               icon: const Icon(Icons.sync),
               onPressed: _reconcileAndReport,
+            ),
+            IconButton(
+              tooltip: 'Crossings',
+              icon: const Icon(Icons.explore_outlined),
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => JournalPage(journal: widget.journal),
+                ),
+              ),
             ),
             IconButton(
               tooltip: 'Re-register everything',
@@ -203,6 +284,13 @@ class _ReminderListPageState extends State<ReminderListPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            FloatingActionButton.small(
+              heroTag: 'geofence',
+              tooltip: 'Geofence test',
+              onPressed: _offerGeofenceTests,
+              child: const Icon(Icons.place_outlined),
+            ),
+            const SizedBox(height: 12),
             FloatingActionButton.small(
               heroTag: 'smoke',
               tooltip: 'Fire in two minutes',

@@ -1,28 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:remind_core/remind_core.dart';
+import 'package:remind_geofence/remind_geofence.dart';
 import 'package:remind_notifications/remind_notifications.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'runtime/geofence_callback.dart';
+import 'runtime/notifications.dart';
+import 'runtime/prefs_crossing_journal.dart';
 import 'runtime/prefs_reminder_store.dart';
 import 'ui/app.dart';
-
-/// The channel reminders are delivered on.
-///
-/// `Importance.max` so Android shows a heads-up notification rather than a
-/// silent entry in the shade — without it a reminder that fires perfectly looks
-/// exactly like one that never fired.
-const NotificationDetails _details = NotificationDetails(
-  android: AndroidNotificationDetails(
-    'reminders',
-    'Reminders',
-    channelDescription: 'Scheduled reminders from remind_app',
-    importance: Importance.max,
-    priority: Priority.high,
-  ),
-);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,24 +21,22 @@ Future<void> main() async {
   tz.setLocalLocation(zone);
 
   final plugin = FlutterLocalNotificationsPlugin();
-  await plugin.initialize(
-    settings: const InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-    ),
-  );
+  await plugin.initialize(settings: notificationInitialisation);
   await plugin
       .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
+        AndroidFlutterLocalNotificationsPlugin
+      >()
       ?.requestNotificationsPermission();
 
   final store = await PrefsReminderStore.open();
+  final journal = await PrefsCrossingJournal.open(zone);
 
   // Exactness is a hard requirement here: a reminder that arrives fifteen
   // minutes late is worse than one that never arrives at all.
-  final backend = NotificationBackend(
+  final notifications = NotificationBackend(
     scheduler: FlutterLocalNotificationsScheduler(
       plugin: plugin,
-      details: _details,
+      details: reminderNotificationDetails,
       exactness: ExactnessPolicy.requireExact,
     ),
   );
@@ -56,21 +44,50 @@ Future<void> main() async {
   // Android 14 denies the permission by default, so ask once at startup. If
   // the user refuses, the app keeps working and says so rather than delivering
   // late without mentioning it.
-  if (!await backend.deliversExactly) {
-    await backend.requestExactPermission();
+  if (!await notifications.deliversExactly) {
+    await notifications.requestExactPermission();
   }
+
+  final geofences = NativeGeofenceScheduler(
+    callback: onGeofenceCrossing,
+    hasLocationPermission: _hasBackgroundLocation,
+  );
+  await geofences.initialize();
+  // Android drops every geofence on reboot and some OEMs do not reliably
+  // autostart the app to restore them. iOS keeps them, so this is a no-op
+  // there. Calling it at launch costs nothing and covers the gap.
+  await geofences.recreateAfterReboot();
 
   final runtime = RemindRuntime(
     store: store,
     zone: zone,
-    backends: [backend],
+    backends: [notifications, GeofenceBackend(scheduler: geofences)],
   );
 
   // The platform holds only a window, so it has to be refilled every launch.
   await runtime.reconcile();
 
-  runApp(RemindApp(runtime: runtime, plugin: plugin, details: _details));
+  runApp(
+    RemindApp(
+      runtime: runtime,
+      plugin: plugin,
+      details: reminderNotificationDetails,
+      journal: journal,
+    ),
+  );
 }
+
+/// Whether the app may watch regions while it is not in the foreground.
+///
+/// Background location is the strictest permission either platform offers, and
+/// on Android it cannot be requested in one step: the user has to grant
+/// foreground location first, and only then can "Allow all the time" be asked
+/// for — which opens system settings rather than a dialog.
+///
+/// Reported rather than demanded. An app that only uses date-and-time reminders
+/// should never reach this code at all.
+Future<bool> _hasBackgroundLocation() async =>
+    Permission.locationAlways.isGranted;
 
 /// The device's own time zone, falling back to UTC if the platform will not
 /// say.

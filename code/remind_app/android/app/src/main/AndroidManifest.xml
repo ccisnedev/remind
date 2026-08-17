@@ -26,6 +26,19 @@
          those apps will actually face. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
 
+    <!-- Region monitoring. ACCESS_BACKGROUND_LOCATION is the strictest
+         permission on the platform: Google Play grants it only after a manual
+         review that includes a video demonstrating background location as core
+         functionality, and an app that fails that review can be removed.
+
+         It is declared here because this demo exercises remind_geofence. An
+         app that only needs date-and-time reminders must NOT declare any of
+         these — remind_notifications requires none of them, which is the whole
+         reason the adapters are separate packages. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+
     <application
         android:label="remind_app"
         android:name="${applicationName}"

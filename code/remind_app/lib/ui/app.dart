@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:remind_core/remind_core.dart';
+import 'package:remind_geofence/remind_geofence.dart';
 
 import 'reminder_list_page.dart';
 
@@ -18,8 +19,12 @@ class RemindApp extends StatefulWidget {
     required this.runtime,
     required this.plugin,
     required this.details,
+    required this.journal,
     super.key,
   });
+
+  /// Where crossing outcomes are recorded, including the silent ones.
+  final CrossingJournal journal;
 
   /// The wiring of store, reconciler and backends.
   final RemindRuntime runtime;
@@ -73,6 +78,7 @@ class _RemindAppState extends State<RemindApp> with WidgetsBindingObserver {
           runtime: widget.runtime,
           plugin: widget.plugin,
           details: widget.details,
+          journal: widget.journal,
         ),
       );
 }
