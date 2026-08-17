@@ -53,6 +53,7 @@ jobs:
       matrix:
         package:
           - remind_notifications
+          - remind_geofence
     defaults:
       run:
         working-directory: code/${{ matrix.package }}

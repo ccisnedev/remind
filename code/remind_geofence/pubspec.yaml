@@ -1,0 +1,25 @@
+name: remind_geofence
+description: >-
+  Delivers remind_core reminders when the device enters, leaves or dwells in a
+  region. Evaluates outstanding conditions before notifying, and records why a
+  crossing did or did not reach the user.
+version: 0.1.0
+repository: https://github.com/ccisnedev/remind
+issue_tracker: https://github.com/ccisnedev/remind/issues
+
+environment:
+  flutter: '>=3.19.0'
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  meta: ^1.16.0
+  native_geofence: ^1.3.1
+  remind_core: ^0.1.0
+  timezone: '>=0.10.0 <0.12.0'
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
