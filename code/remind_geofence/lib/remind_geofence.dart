@@ -21,6 +21,8 @@ library;
 
 export 'src/crossing.dart' show Crossing;
 export 'src/crossing_evaluator.dart' show CrossingEvaluator, UndeterminedPolicy;
+export 'src/crossing_handler.dart'
+    show CrossingDelivery, CrossingHandler, CrossingReport;
 export 'src/crossing_journal.dart'
     show CrossingJournal, CrossingOutcomeCodec, InMemoryCrossingJournal;
 export 'src/crossing_outcome.dart'
