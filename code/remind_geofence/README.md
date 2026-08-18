@@ -137,6 +137,26 @@ documents for wanting more regions than the limit allows.
 minutes when the device is stationary. If a reminder needs to arrive at an exact
 moment, it needs a time trigger, not a place.
 
+That latency becomes distance as soon as the user is moving, which changes what
+a sensible radius is:
+
+| Speed | Distance covered in 2 minutes |
+|---|---|
+| 20 km/h | ~670 m |
+| 30 km/h | ~1,000 m |
+| 50 km/h | ~1,670 m |
+
+A 200 m region around a bus stop fires roughly a kilometre after the passenger
+has passed it. For a trigger that must fire *before* arrival the radius has a
+lower bound of `speed x latency` — around a kilometre for an urban bus, not the
+100–150 m the platforms recommend for a stationary destination.
+
+This package does not enforce that. It registers the region it is given, because
+speed is a property of the journey rather than of the reminder. Converting "wake
+me five minutes early" into metres belongs to the application, which knows how
+its users travel. See
+[ADR 0002](../../docs/adr/0002-geofence-radius-follows-speed.md).
+
 ## Licence
 
 MIT
